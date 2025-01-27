@@ -1,0 +1,13 @@
+name = "SpaceTimeMultiscale"
+uuid = "09d1ba18-520f-4224-a428-6c40ffb60418"
+authors = ["Paul B. May"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.6.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
