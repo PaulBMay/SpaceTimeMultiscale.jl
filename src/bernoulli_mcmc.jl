@@ -57,7 +57,7 @@ function bernoulli_mcmc(theta::AbstractArray, data::InputData, m::Int64, thetapr
 
     zproj = Dsgn'*(data.y .- 0.5)
 
-    zproj[1:p] += betapriors.mu .* betapriors.prec
+    zproj[1:p] .+= betapriors.mu .* betapriors.prec
 
     pg = rpg.(fill(0.3, n))
 

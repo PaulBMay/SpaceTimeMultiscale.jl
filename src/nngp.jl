@@ -59,9 +59,9 @@ function nngp(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray,
 
         for component in 1:ncomponents # loop thru components, adding...
 
-            rho +=  (theta[1, component]^2)*expCor(loc[indi,:], theta[2, component], time[indi,:], theta[3, component])
+            rho .+=  (theta[1, component]^2)*expCor(loc[indi,:], theta[2, component], time[indi,:], theta[3, component])
 
-            k += (theta[1, component]^2)*expCor(loc[indi,:], loc[[i],:], theta[2, component], time[indi,:], time[[i],:], theta[3, component])
+            k .+= (theta[1, component]^2)*expCor(loc[indi,:], loc[[i],:], theta[2, component], time[indi,:], time[[i],:], theta[3, component])
 
         end
 
@@ -102,11 +102,11 @@ function nngp(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray,
 
             expCor!(rhodump, T, loc[indi,:], theta[2, component], time[indi,:], theta[3, component])
             rhodump .*= theta[1, component]^2
-            rho += rhodump 
+            rho .+= rhodump 
 
             expCor!(kdump, Tcross, loc[indi,:], loc[[i],:], theta[2, component], time[indi,:], time[[i],:], theta[3, component])
             kdump .*= theta[1, component]^2
-            k += kdump
+            k .+= kdump
             
         end
 
@@ -159,9 +159,9 @@ function nngp!(B::SparseMatrixCSC, Fvals::Vector{Float64}, Border::Vector{Int64}
 
         for component in 1:ncomponents # loop thru components, adding...
 
-            rho +=  (theta[1, component]^2)*expCor(loc[indi,:], theta[2, component], time[indi,:], theta[3, component])
+            rho .+=  (theta[1, component]^2)*expCor(loc[indi,:], theta[2, component], time[indi,:], theta[3, component])
 
-            k += (theta[1, component]^2)*expCor(loc[indi,:], loc[[i],:], theta[2, component], time[indi,:], time[[i],:], theta[3, component])
+            k .+= (theta[1, component]^2)*expCor(loc[indi,:], loc[[i],:], theta[2, component], time[indi,:], time[[i],:], theta[3, component])
             
         end
 
@@ -201,11 +201,11 @@ function nngp!(B::SparseMatrixCSC, Fvals::Vector{Float64}, Border::Vector{Int64}
 
             expCor!(rhodump, T, loc[indi,:], theta[2, component], time[indi,:], theta[3, component])
             rhodump .*= theta[1, component]^2
-            rho += rhodump 
+            rho .+= rhodump 
 
             expCor!(kdump, Tcross, loc[indi,:], loc[[i],:], theta[2, component], time[indi,:], time[[i],:], theta[3, component])
             kdump .*= theta[1, component]^2
-            k += kdump
+            k .+= kdump
             
         end
 
@@ -280,11 +280,11 @@ function nngppred(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractAr
 
             expCor!(rhodump, T, loc[indi,:], theta[2, component], time[indi,:], theta[3, component])
             rhodump .*= theta[1, component]^2
-            rho += rhodump 
+            rho .+= rhodump 
 
             expCor!(kdump, Tcross, loc[indi,:], locpred[[i],:], theta[2, component], time[indi,:], timepred[[i],:], theta[3, component])
             kdump .*= theta[1, component]^2
-            k += kdump
+            k .+= kdump
             
         end
 
@@ -334,11 +334,11 @@ function nngppred!(B::SparseMatrixCSC, Fvals::Vector{Float64}, Border::Vector{In
 
             expCor!(rhodump, T, loc[indi,:], theta[2, component], time[indi,:], theta[3, component])
             rhodump .*= theta[1, component]^2
-            rho += rhodump 
+            rho .+= rhodump 
 
             expCor!(kdump, Tcross, loc[indi,:], locpred[[i],:], theta[2, component], time[indi,:], timepred[[i],:], theta[3, component])
             kdump .*= theta[1, component]^2
-            k += kdump
+            k .+= kdump
            
         end
 

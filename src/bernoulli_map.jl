@@ -22,8 +22,8 @@ function bernoulli_theta_nlp(ltheta::Vector, data::InputData, nb::Matrix{Int64},
     Qpost = Q + Dsgn'*(Omega*Dsgn)
     cholesky!(Qpostchol, Hermitian(Qpost))
     grad = Dsgn'*(data.y - probs) - Q*effects
-    grad[1:p] += betapriors.mu .* betapriors.prec
-    effects += (Qpostchol \ grad)
+    grad[1:p] .+= betapriors.mu .* betapriors.prec
+    effects .+= (Qpostchol \ grad)
 
     error = 2.0
     count = 0
@@ -35,7 +35,7 @@ function bernoulli_theta_nlp(ltheta::Vector, data::InputData, nb::Matrix{Int64},
         Qpost .= Q + Dsgn'*(Omega*Dsgn)
         cholesky!(Qpostchol, Hermitian(Qpost))
         grad .= Dsgn'*(data.y - probs) - Q*effects
-        grad[1:p] += betapriors.mu .* betapriors.prec
+        grad[1:p] .+= betapriors.mu .* betapriors.prec
         update .= effects + (Qpostchol \ grad)
         error = norm(effects - update) / norm(update)
         effects .= copy(update)
@@ -109,4 +109,25 @@ function bernoulli_map(theta::AbstractArray, data::InputData, m::Integer, thetap
 
     return thetamap, thetamin
     
+end
+
+function bernoulli_hessian(thetamap::AbstractArray, data::InputData, m::Integer, thetapriors::NamedTuple, betapriors::NamedTuple; nr_tol = 1e-4, nr_maxiter = 30)
+
+    n = length(data.y)
+
+    local nb = getneighbors(data.loc, m)
+
+    local B, F, Border = nngp(nb, data.loc, data.time, thetamap)
+
+    local Dsgn = sparse_hcat(data.X, speye(n))
+
+    local Qpost = blockdiag(spdiagm(betapriors.prec), (B'*spdiagm(1 ./ F)*B)) + Dsgn'*Dsgn
+    local Qpostchol = cholesky(Hermitian(Qpost))
+
+    local lthetamap = log.(vec(thetamap))
+
+    local Hess = FiniteDiff.finite_difference_hessian(t -> bernoulli_theta_nlp(t, data, nb, thetapriors, betapriors, Dsgn, B, F, Border, Qpostchol, nr_tol, nr_maxiter), lthetamap)
+
+    return inv(Hess)
+
 end

@@ -12,7 +12,7 @@ function getgausssamp!(Qpc::SparseArrays.CHOLMOD.Factor, Qp::SparseMatrixCSC, yP
 
     error = (Qpc.U \ randn(length(yProj)))
 
-    samp += @view error[invperm(Qpc.p)]
+    samp .+= @view error[invperm(Qpc.p)]
 
     return samp
 
@@ -26,7 +26,7 @@ function getgausssamp(Qpc::SparseArrays.CHOLMOD.Factor, yProj::Vector{Float64})
 
     error = (Qpc.U \ randn(length(yProj)))
 
-    samp += @view error[invperm(Qpc.p)]
+    samp .+= @view error[invperm(Qpc.p)]
 
     return samp
 

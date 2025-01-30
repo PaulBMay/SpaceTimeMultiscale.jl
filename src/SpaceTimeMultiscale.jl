@@ -12,6 +12,8 @@ using ProgressBars
 using Optim
 using Plots
 
+using FiniteDiff
+
 
 ########################
 # Structures
@@ -62,8 +64,15 @@ export bernoulli_map
 
 include("bernoulli_mcmc.jl")
 export bernoulli_mcmc
+export bernoulli_hessian
 
 include("continuous_loo.jl")
 export continuous_loo
+
+include("bernoulli_loo.jl")
+export bernoulli_loo
+
+include("bernoulli_lpmc.jl")
+export bernoulli_lpmc
 
 end
