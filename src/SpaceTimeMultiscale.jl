@@ -76,4 +76,9 @@ include("bernoulli_lpmc.jl")
 export bernoulli_lpmc
 export bernoulli_lpmc_3o
 
+include("predict.jl")
+export continuous_predict
+export bernoulli_predict
+export agg_predict
+
 end
