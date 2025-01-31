@@ -74,5 +74,6 @@ export bernoulli_loo
 
 include("bernoulli_lpmc.jl")
 export bernoulli_lpmc
+export bernoulli_lpmc_3o
 
 end
