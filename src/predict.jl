@@ -33,6 +33,8 @@ function continuous_predict(readdir::String, Xpred::AbstractArray, locpred::Abst
 
         nngppred!(B, F, Border, nb, loc, time, locpred, timepred, theta)
 
+        F[F .< 0] .= 0.0
+
         predsamps[i,:] = Xpred*beta[i,:] + B*w[i,:] + sqrt.(F).*randn(npred) + sqrt(tSq[i])*randn(npred)
     
     end
@@ -47,7 +49,7 @@ function bernoulli_predict(readdir::String, Xpred::AbstractArray, locpred::Abstr
     effects = CSV.read(joinpath(readdir, "effects.csv"), Tables.matrix)
     loctime = CSV.read(joinpath(readdir, "loctime.csv"), Tables.matrix)
 
-    nsamps = size(params, 1)
+    nsamps = size(thetas, 1)
     npred = size(locpred,1)
     n = size(loctime, 1)
     k = size(effects, 2)
@@ -73,7 +75,9 @@ function bernoulli_predict(readdir::String, Xpred::AbstractArray, locpred::Abstr
 
         nngppred!(B, F, Border, nb, loc, time, locpred, timepred, theta)
 
-        predsamps[i,:] = softmax(Xpred*beta[i,:] + B*w[i,:] + sqrt.(F).*randn(npred))
+        F[F .< 0] .= 0.0
+
+        predsamps[i,:] = softmax.(Xpred*beta[i,:] + B*w[i,:] + sqrt.(F).*randn(npred))
     
     end
 
@@ -118,13 +122,13 @@ function agg_predict(readdirz::String, readdiry::String, Projection::AbstractArr
     kz = size(effectsz, 2)
 
     betaz = view(effectsz, :, 1:p)
-    wz = view(effectsz, :, (p+1):ky)
+    wz = view(effectsz, :, (p+1):kz)
 
     #########
 
     nsamps = size(paramsy, 1)
     npred = size(locpred,1)
-    nproj = size(Projection,2)
+    nproj = size(Projection,1)
 
     #################
     
@@ -151,8 +155,11 @@ function agg_predict(readdirz::String, readdiry::String, Projection::AbstractArr
         nngppred!(By, Fy, Byorder, nby, locy, timey, locpred, timepred, thetay)
         nngppred!(Bz, Fz, Bzorder, nbz, locz, timez, locpred, timepred, thetaz)
 
+        Fy[Fy .< 0] .= 0.0
+        Fz[Fz .< 0] .= 0.0
+
         y .= Xpred*betay[i,:] + By*wy[i,:] + sqrt.(Fy).*randn(npred) + sqrt(tSq[i])*randn(npred)
-        zprob .= softmax(Xpred*betaz[i,:] + Bz*wz[i,:] + sqrt.(Fz).*randn(npred))
+        zprob .= softmax.(Xpred*betaz[i,:] + Bz*wz[i,:] + sqrt.(Fz).*randn(npred))
         z .= 1*(zprob .> rand(npred))
 
         predsamps[i,:] = Projection * (z .* y.^pwr)

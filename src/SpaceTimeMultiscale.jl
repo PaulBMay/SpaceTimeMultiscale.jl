@@ -46,6 +46,7 @@ export quiltplot
 export softmax
 export getpropvar
 export getlastsamp
+export datasplit
 
 include("priors.jl")
 export gammaldens
@@ -53,6 +54,7 @@ export plotgamma
 
 include("continuous_map.jl")
 export continuous_map
+export continuous_hessian
 
 include("samplers.jl")
 
@@ -80,5 +82,8 @@ include("predict.jl")
 export continuous_predict
 export bernoulli_predict
 export agg_predict
+
+include("simulate.jl")
+export simulate_field
 
 end

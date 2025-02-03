@@ -252,6 +252,7 @@ function nngppred(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractAr
     local n = size(loc,1)
     local npred = size(locpred, 1)
     local m = size(neighbors, 2)
+    ncomponents = size(theta, 2)
 
     local Bnnz = npred*m
     local Bvals = zeros(Bnnz)
@@ -300,9 +301,9 @@ function nngppred(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractAr
 
     end
 
-    B = sparse(Brows, Bcols, Bvals, np, n)
+    B = sparse(Brows, Bcols, Bvals, npred, n)
 
-    Border = invperm(sortperm( @.(Bcols + ( Brows ./ (np+1) ))))
+    Border = invperm(sortperm( @.(Bcols + ( Brows ./ (npred+1) ))))
 
     return B, Fvals, Border
 
@@ -312,8 +313,9 @@ end
 function nngppred!(B::SparseMatrixCSC, Fvals::Vector{Float64}, Border::Vector{Int64}, neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, theta::AbstractArray)
 
     local n = size(loc,1)
-    local npred = size(locp, 1)
+    local npred = size(locpred, 1)
     local m = size(neighbors, 2)
+    ncomponents = size(theta, 2)
 
     # Allocate arrays for computation within loop
     local rho = zeros(m, m)

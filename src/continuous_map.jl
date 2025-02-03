@@ -82,3 +82,32 @@ function continuous_theta_nlp(pars::Vector, data::InputData, nb::Matrix, thetapr
 
 
 end
+
+
+function continuous_hessian(thetamap::AbstractArray, tSqmap::Number, data::InputData, m::Integer, thetapriors::NamedTuple, tSqprior::NamedTuple; nr_tol = 1e-4, nr_maxiter = 30)
+
+    n = size(data.y, 1) # sample size
+    p = size(data.X, 2) # num predictors
+
+    neighbors = getneighbors(data.loc, m)
+
+    B,F,Border = nngp(neighbors, data.loc, data.time, thetamap)
+
+    Dsgn = sparse_hcat(data.X, speye(n))
+
+    betaprec = fill(0.01, p)
+
+    Qpost = blockdiag(
+        spdiagm(betaprec),
+        B'*spdiagm(1 ./ F)*B
+    ) + (1/tSqmap)*Dsgn'*Dsgn
+
+    Qpostchol = cholesky(Hermitian(Qpost))
+
+    lparmap = log.( vcat(vec(thetamap), tSqmap)) 
+
+    local Hess = FiniteDiff.finite_difference_hessian(t -> continuous_theta_nlp(t, data, neighbors, thetapriors, tSqprior, betaprec, Dsgn, B, F, Border, Qpostchol), lparmap)
+
+    return inv(Hess)
+
+end
