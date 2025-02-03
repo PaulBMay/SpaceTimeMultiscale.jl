@@ -1,6 +1,6 @@
 function continuous_predict(readdir::String, Xpred::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, m::Integer)
 
-    params = CSV.read(joinpath(readdir, "params.csv"), DataFrame)
+    params = CSV.read(joinpath(readdir, "params.csv"), Tables.matrix)
     effects = CSV.read(joinpath(readdir, "effects.csv"), Tables.matrix)
     loctime = CSV.read(joinpath(readdir, "loctime.csv"), Tables.matrix)
 
@@ -9,6 +9,7 @@ function continuous_predict(readdir::String, Xpred::AbstractArray, locpred::Abst
     n = size(loctime, 1)
     k = size(effects, 2)
     p = k - n
+    nparams = size(params, 2)
 
     beta = view(effects, :, 1:p)
     w = view(effects, :, (p+1):k)
@@ -18,7 +19,9 @@ function continuous_predict(readdir::String, Xpred::AbstractArray, locpred::Abst
 
     nb = getpredneighbors(loc, locpred, m)
 
-    theta = reshape(params[1,:], 3, :)
+    tSq = view(params, :, nparams)
+    thetas = view(params, :, 1:(nparams - 1))
+    theta = reshape(thetas[1,:], 3, :)
 
     B,F,Border = nngppred(nb, loc, time, locpred, timepred, theta)
 
@@ -26,11 +29,11 @@ function continuous_predict(readdir::String, Xpred::AbstractArray, locpred::Abst
 
     @views for i in ProgressBar(1:nsamps)
 
-        theta = reshape(params[i,:], 3, :)
+        theta = reshape(thetas[i,:], 3, :)
 
         nngppred!(B, F, Border, nb, loc, time, locpred, timepred, theta)
 
-        predsamps[i,:] = Xpred*beta[i,:] + B*w[i,:] + sqrt.(F).*randn(npred) + sqrt(params.tSq[i])*randn(npred)
+        predsamps[i,:] = Xpred*beta[i,:] + B*w[i,:] + sqrt.(F).*randn(npred) + sqrt(tSq[i])*randn(npred)
     
     end
 
@@ -40,7 +43,7 @@ end
 
 function bernoulli_predict(readdir::String, Xpred::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, m::Integer)
 
-    params = CSV.read(joinpath(readdir, "params.csv"), DataFrame)
+    thetas = CSV.read(joinpath(readdir, "params.csv"), Tables.matrix)
     effects = CSV.read(joinpath(readdir, "effects.csv"), Tables.matrix)
     loctime = CSV.read(joinpath(readdir, "loctime.csv"), Tables.matrix)
 
@@ -58,7 +61,7 @@ function bernoulli_predict(readdir::String, Xpred::AbstractArray, locpred::Abstr
 
     nb = getpredneighbors(loc, locpred, m)
 
-    theta = reshape(params[1,:], 3, :)
+    theta = reshape(thetas[1,:], 3, :)
 
     B,F,Border = nngppred(nb, loc, time, locpred, timepred, theta)
 
@@ -66,7 +69,7 @@ function bernoulli_predict(readdir::String, Xpred::AbstractArray, locpred::Abstr
 
     @views for i in ProgressBar(1:nsamps)
 
-        theta = reshape(params[i,:], 3, :)
+        theta = reshape(thetas[i,:], 3, :)
 
         nngppred!(B, F, Border, nb, loc, time, locpred, timepred, theta)
 
@@ -84,7 +87,7 @@ end
 
 function agg_predict(readdirz::String, readdiry::String, Projection::AbstractArray, pwr::Number, Xpred::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, m::Integer)
 
-    paramsy = CSV.read(joinpath(readdiry, "params.csv"), DataFrame)
+    paramsy = CSV.read(joinpath(readdiry, "params.csv"), Tables.matrix)
     effectsy = CSV.read(joinpath(readdiry, "effects.csv"), Tables.matrix)
     loctimey = CSV.read(joinpath(readdiry, "loctime.csv"), Tables.matrix)
 
@@ -94,13 +97,17 @@ function agg_predict(readdirz::String, readdiry::String, Projection::AbstractArr
     ny = size(loctimey, 1)
     ky = size(effectsy, 2)
     p = ky - ny
+    nparamsy = size(paramsy, 2)
 
     betay = view(effectsy, :, 1:p)
     wy = view(effectsy, :, (p+1):ky)
 
+    tSq = view(paramsy, :, nparamsy)
+    thetasy = view(paramsy, :, 1:(nparamsy-1))
+
     ############
 
-    paramsz = CSV.read(joinpath(readdirz, "params.csv"), DataFrame)
+    thetasz = CSV.read(joinpath(readdirz, "params.csv"), Tables.matrix)
     effectsz = CSV.read(joinpath(readdirz, "effects.csv"), Tables.matrix)
     loctimez = CSV.read(joinpath(readdirz, "loctime.csv"), Tables.matrix)
 
@@ -124,8 +131,8 @@ function agg_predict(readdirz::String, readdiry::String, Projection::AbstractArr
     nby = getpredneighbors(locy, locpred, m)
     nbz = getpredneighbors(locz, locpred, m)
 
-    thetay = reshape(paramsy[1,:], 3, :)
-    thetaz = reshape(paramsz[1,:], 3, :)
+    thetay = reshape(thetasy[1,:], 3, :)
+    thetaz = reshape(thetasz[1,:], 3, :)
 
     By,Fy,Byorder = nngppred(nby, locy, timey, locpred, timepred, thetay)
     Bz,Fz,Bzorder = nngppred(nbz, locz, timez, locpred, timepred, thetaz)
@@ -138,13 +145,13 @@ function agg_predict(readdirz::String, readdiry::String, Projection::AbstractArr
 
     @views for i in ProgressBar(1:nsamps)
 
-        thetay = reshape(paramsy[i,:], 3, :)
-        thetaz = reshape(paramsz[i,:], 3, :)
+        thetay = reshape(thetasy[i,:], 3, :)
+        thetaz = reshape(thetasz[i,:], 3, :)
 
         nngppred!(By, Fy, Byorder, nby, locy, timey, locpred, timepred, thetay)
         nngppred!(Bz, Fz, Bzorder, nbz, locz, timez, locpred, timepred, thetaz)
 
-        y .= Xpred*betay[i,:] + By*wy[i,:] + sqrt.(Fy).*randn(npred) + sqrt(paramsy.tSq[i])*randn(npred)
+        y .= Xpred*betay[i,:] + By*wy[i,:] + sqrt.(Fy).*randn(npred) + sqrt(tSq[i])*randn(npred)
         zprob .= softmax(Xpred*betaz[i,:] + Bz*wz[i,:] + sqrt.(Fz).*randn(npred))
         z .= 1*(zprob .> rand(npred))
 
