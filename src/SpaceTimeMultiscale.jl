@@ -40,6 +40,9 @@ export nngp!
 export nngppred
 export nngppred!
 
+include("nngp2.jl")
+export nngp2
+
 include("misc.jl")
 
 export quiltplot

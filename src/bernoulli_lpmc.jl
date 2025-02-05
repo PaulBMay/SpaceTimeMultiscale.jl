@@ -247,3 +247,91 @@ function bernoulli_lpmc_3o(thetamap::AbstractArray, data::InputData, m::Integer,
     return nothing
 
 end
+
+# Fix theta at the MAPs
+function bernoulli_lpmc_3o(thetamap::AbstractArray, data::InputData, m::Integer, betapriors::NamedTuple, outdir::String, nsamps::Integer; nr_tol = 1e-3, nr_maxiter = 30)
+
+    ############################
+    # Data dimensions and prep
+    ##########################
+
+    n = size(data.y, 1) # sample size
+    p = size(data.X, 2) # num predictors
+    ncomponents = size(thetamap, 2)
+
+    # Does the out_dir exist?
+
+    if !isdir(outdir)
+        error("Can't find your outdir")
+    end
+
+    # Prepare CSV's
+
+    loctimeout = joinpath(outdir, "loctime.csv")
+    CSV.write(loctimeout, DataFrame(lon = data.loc[:,1], lat = data.loc[:,2], time = data.time[:,1]))
+
+    paramsout = joinpath(outdir, "params.csv")
+    paramsdf = DataFrame(zeros(1, ncomponents*3), repeat(["sw", "rangeS", "rangeT"], ncomponents) .* repeat(string.(1:ncomponents), inner = 3))
+
+    effectsout = joinpath(outdir, "effects.csv")
+    effectsdf = DataFrame(zeros(1,p+n), ["beta_".*string.(1:p); "w_".*string.(1:n)])
+
+    # fixed/random effect values
+    effects = zeros(p + n)
+    mode = copy(effects)
+
+    paramsdf[1,:] = vec(thetamap)
+    effectsdf[1,:] = effects
+
+    CSV.write(paramsout, paramsdf)
+    CSV.write(effectsout, effectsdf)
+
+
+    ####################
+    # Lord have mercy that was boring.
+    # Now fun stuff. Get the neighbor sets and initial NNGP mats
+    #####################
+
+    print("Getting neighbor sets\n")
+
+    nb = getneighbors(data.loc, m)
+
+    Dsgn = sparse_hcat(data.X, speye(n))
+
+    print("Initial NNGP mats\n")
+
+    theta = copy(thetamap)
+
+    B,F,Border = nngp(nb, data.loc, data.time, theta)
+
+    Q = blockdiag(spdiagm(betapriors.prec), (B'*spdiagm(1 ./ F)*B))
+
+    Qpost = Q + Dsgn'*Dsgn
+
+    Qpostchol = cholesky(Hermitian(Qpost))
+
+    bernoulli_newt!(mode, data.y, Dsgn, Q, Qpostchol, betapriors, nr_tol, nr_maxiter)
+
+    prob = softmax.(Dsgn*mode)
+    w3 = @. prob*(1-prob)*(1 - 2*prob)
+    v = Dsgn'*w3
+    adj = Qpostchol \ v
+
+    mode .-= adj
+
+    Qperm = invperm(Qpostchol.p)
+
+    for i in ProgressBar(1:nsamps)
+
+        effects .= mode + (Qpostchol.U \ randn(n+p))[Qperm]
+
+        effectsdf[1,:] = effects
+
+        CSV.write(effectsout, effectsdf; append = true, header = false)
+
+    end
+
+
+    return nothing
+
+end
