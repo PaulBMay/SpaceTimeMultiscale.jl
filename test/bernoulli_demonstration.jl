@@ -69,7 +69,7 @@ outdir_lp3o = "./test/dump_lp3o/"
 
 isdir(outdir_lp3o) || mkdir(outdir_lp3o)
 
-bernoulli_lpmc_3o(thetamap, data, m, Hess, betapriors, outdir_lp3o, 500)
+bernoulli_lpmc_3o(thetamap, data, m, Hess, betapriors, outdir_lp3o, 1000)
 
 
 pardf = CSV.read(outdir_lp*"params.csv", DataFrame)
@@ -111,11 +111,18 @@ plot!(pardf_mc.rangeT2)
 
 ######################
 
+outdir_lp3o_f = "./test/dump_lp3o_f"
+
+isdir(outdir_lp3o_f) || mkdir(outdir_lp3o_f)
+
+bernoulli_lpmc_3o(thetamap, data, m, betapriors, outdir_lp3o_f, 1000)
+
 
 ######################
 
 lpd_lp = bernoulli_loo(outdir_lp, data)
 lpd_lp3o = bernoulli_loo(outdir_lp3o, data)
+lpd_lp3o_f = bernoulli_loo(outdir_lp3o_f, data)
 lpd_mc = bernoulli_loo(outdir_mc,data)
 
 histogram(lpd_mc, alpha = 0.5)
@@ -123,6 +130,7 @@ histogram!(lpd_lp3o, alpha = 0.5)
 
 sum(lpd_lp)
 sum(lpd_lp3o)
+sum(lpd_lp3o_f)
 sum(lpd_mc)
 
 scatter(lpd_lp3o, lpd_mc)
@@ -178,4 +186,5 @@ sum(log.(predmu_mc[pos])) + sum(log.(1 .- predmu_mc[.!pos]))
 rm(outdir_mc, recursive = true)
 rm(outdir_lp, recursive = true)
 rm(outdir_lp3o, recursive = true)
+rm(outdir_lp3o_f, recursive = true)
 
