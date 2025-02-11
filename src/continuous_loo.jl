@@ -51,7 +51,7 @@ function continuous_loo(outdir::String, data::InputData, group::Vector{Integer})
     params = CSV.read(paramspath, DataFrame)
     tSq = params.tSq
 
-    lpd = zeros(n)
+    lpd = zeros(ngroups)
     nll = zeros(nsamps)
 
     for i = ProgressBar(1:ngroups)

@@ -40,7 +40,7 @@ function bernoulli_loo(outdir::String, data::InputData, group::Vector{Integer})
     w = view(effects, :, (p+1):(p+n))
     nsamps = size(effects, 1)
 
-    lpd = zeros(n)
+    lpd = zeros(ngroups)
     nll = zeros(nsamps)
 
     for i = ProgressBar(1:ngroups)
