@@ -89,4 +89,8 @@ export agg_predict
 include("simulate.jl")
 export simulate_field
 
+include("variogram.jl")
+export STvariogram
+export STvariogramTheory
+
 end
