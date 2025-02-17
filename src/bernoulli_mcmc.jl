@@ -313,8 +313,9 @@ function bernoulli_mcmc(theta::AbstractArray, propvar::AbstractArray, data::Inpu
        # Sample sw, rangeS, rangeT
        ###########################
 
+       currentltheta = log.(vec(theta))
        
-       propltheta = log.(vec(theta)) + propvarL*randn(3*ncomponents)
+       propltheta = currentltheta + propvarL*randn(3*ncomponents)
 
        proptheta = exp.(reshape(propltheta, 3, ncomponents))
 
