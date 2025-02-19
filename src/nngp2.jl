@@ -21,79 +21,51 @@ function expcord!(rho::AbstractArray, ds::AbstractArray, dt::AbstractArray, thet
 
 end
 
-function nngp2(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray, theta::AbstractArray)
+function nngppred(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, theta::AbstractArray)
 
     local n = size(loc,1)
+    local npred = size(locpred, 1)
     local m = size(neighbors, 2)
     ncomponents = size(theta, 2)
 
-    local Bnnz = sum(1:(m+1)) + (n - m - 1)*(m+1)
+    local Bnnz = npred*m
     local Bvals = zeros(Bnnz)
-    Bvals[1] = 1
 
-    local Brows = zeros(Int64, Bnnz)
-    local Bcols = zeros(Int64, Bnnz)
-    Brows[1] = 1 
-    Bcols[1] = 1
+    local Brows = repeat(1:npred, inner = m)
+    local Bcols = vec(neighbors')
 
-    local Fvals = zeros(n)
-    Fvals[1] = sum(theta[1,:].^2)
+    local Fvals = zeros(npred)
 
-    curInd = 1
+    # Save distances for reuse
 
-    @views for i in 2:(m+1)
+    Ds = zeros(m^2, npred)
+    Dt = zeros(m^2, npred)
 
-        indi = 1:(i-1)
+    ds = zeros(m, npred)
+    dt = zeros(m, npred)
 
-        mi = i - 1
-
-        ds = pairwise(Euclidean(), loc[indi,:], dims = 1)
-        dt = pairwise(Euclidean(), time[indi,:], dims = 1)
-        dss = pairwise(Euclidean(), loc[indi,:], loc[[i],:], dims = 1)
-        dtt = pairwise(Euclidean(), time[indi,:], time[[i],:], dims = 1)
-
-        rho = expcord(ds, dt, theta)
-        k = expcord(dss, dtt, theta)
-        
-        cholesky!(rho) 
-
-        ldiv!(UpperTriangular(rho)', k)
-
-        Fvals[i] = sum(theta[1,:].^2) - dot(k, k)
-
-        ldiv!(UpperTriangular(rho), k)
-
-        Bvals[(curInd+1):(curInd + mi + 1)] = [1; -k]
-        Brows[(curInd+1):(curInd + mi + 1)] .= i
-        Bcols[(curInd+1):(curInd + mi + 1)] = [i; indi]
-
-        curInd += mi + 1
-
-    end
 
     # Allocate arrays for computation within loop
     local rho = zeros(m, m)
-    local ds = zeros(m, m)
-    local dt = zeros(m,m)
     local k = zeros(m,1)
-    local dss = zeros(m,1)
-    local dtt = zeros(m,1)
 
-
-
-    @views for i in (m+2):n
+    @views for i in 1:npred
         
-        indi = neighbors[i - m - 1,:]
+        indi = neighbors[i,:]
 
-        pairwise!(ds, Euclidean(), loc[indi,:], dims = 1)
-        pairwise!(dt, Euclidean(), time[indi,:], dims = 1)
-        pairwise!(dss, Euclidean(), loc[indi,:], loc[[i],:], dims = 1)
-        pairwise!(dtt, Euclidean(), time[indi,:], time[[i],:], dims = 1)
+        fill!(rho, 0.0) # reset values to zero 
+        fill!(k, 0.0)
 
-        expcord!(rho, ds, dt, theta)
-        expcord!(k, dss, dtt, theta)
-        
-        cholesky!(rho) 
+        pairwise!(reshape(Ds[:,i],  m, m), Euclidean(), loc[indi,:], dims = 1)
+        pairwise!(reshape(Dt[:,i], m, m), Euclidean(), time[indi,:], dims = 1)
+
+        pairwise!(ds[:,i:i], Euclidean(), loc[indi,:], locpred[[i],:], dims = 1)
+        pairwise!(dt[:,i:i], Euclidean(), time[indi,:], timepred[[i],:], dims = 1)
+
+        expcord!(rho, reshape(Ds[:,i],  m, m), reshape(Dt[:,i],  m, m), theta)
+        expcord!(k, ds[:,i], dt[:,i], theta)
+
+        cholesky!(Symmetric(rho)) 
 
         ldiv!(UpperTriangular(rho)', k)
 
@@ -101,21 +73,49 @@ function nngp2(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray
 
         ldiv!(UpperTriangular(rho), k)
 
-        Bvals[(curInd+1):(curInd + m + 1)] = [1; -k]
-        Brows[(curInd+1):(curInd + m + 1)] .= i
-        Bcols[(curInd+1):(curInd + m + 1)] = [i; indi]
-
-
-        curInd += m + 1
+        Bvals[((i-1)*m + 1):(i*m)] .= k
 
     end
 
-    B = sparse(Brows, Bcols, Bvals)
+    B = sparse(Brows, Bcols, Bvals, npred, n)
 
-    Border = invperm(sortperm( @.(Bcols + ( Brows ./ (n+1) ))))
+    Border = invperm(sortperm( @.(Bcols + ( Brows ./ (npred+1) ))))
 
-    #println(cor(Bvals, B.nzval[Border]))
+    return B, Fvals, Border, NNDists(Ds, Dt, ds, dt, m)
 
-    return B, Fvals, Border
+
+end
+
+function nngppred!(B::SparseMatrixCSC, Fvals::Vector{Float64}, Border::Vector{Int64}, NND::NNDists, theta::AbstractArray)
+
+    local npred, n = size(B)
+    local m = NND.m
+
+    # Allocate arrays for computation within loop
+    local rho = zeros(m, m)
+    local k = zeros(m,1)
+
+    @views for i in 1:npred
+        
+
+        fill!(rho, 0.0) # reset values to zero 
+        fill!(k, 0.0)
+
+        expcord!(rho, reshape(NND.Ds[:,i],  m, m), reshape(NND.Dt[:,i],  m, m), theta)
+        expcord!(k, NND.ds[:,i], NND.dt[:,i], theta)
+
+        cholesky!(Symmetric(rho))
+
+        ldiv!(UpperTriangular(rho)', k)
+
+        Fvals[i] = sum(theta[1,:].^2) - dot(k, k)
+
+        ldiv!(UpperTriangular(rho), k)
+
+        B.nzval[Border[((i-1)*m + 1):(i*m)]] .= k
+
+    end
+
+    return nothing
 
 end

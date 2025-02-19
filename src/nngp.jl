@@ -247,7 +247,7 @@ function getpredneighbors(loc, locpred, m)
 
 end
 
-function nngppred(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, theta::AbstractArray)
+function nngppred2(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, theta::AbstractArray)
 
     local n = size(loc,1)
     local npred = size(locpred, 1)
@@ -310,7 +310,7 @@ function nngppred(neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractAr
 
 end
 
-function nngppred!(B::SparseMatrixCSC, Fvals::Vector{Float64}, Border::Vector{Int64}, neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, theta::AbstractArray)
+function nngppred2!(B::SparseMatrixCSC, Fvals::Vector{Float64}, Border::Vector{Int64}, neighbors::Matrix{Int64}, loc::AbstractArray, time::AbstractArray, locpred::AbstractArray, timepred::AbstractArray, theta::AbstractArray)
 
     local n = size(loc,1)
     local npred = size(locpred, 1)

@@ -26,6 +26,14 @@ struct InputData{T}
     time::Matrix{Float64}
 end
 
+struct NNDists 
+    Ds::Matrix{Float64}
+    Dt::Matrix{Float64}
+    ds::Matrix{Float64}
+    dt::Matrix{Float64}
+    m::Integer
+end
+
 export InputData
 
 ################
@@ -37,11 +45,12 @@ include("nngp.jl")
 export getneighbors
 export nngp
 export nngp!
-export nngppred
-export nngppred!
+#export nngppred
+#export nngppred!
 
 include("nngp2.jl")
-export nngp2
+export nngppred
+export nngppred!
 
 include("misc.jl")
 

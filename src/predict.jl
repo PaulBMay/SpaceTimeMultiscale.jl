@@ -23,7 +23,7 @@ function continuous_predict(readdir::String, Xpred::AbstractArray, locpred::Abst
     thetas = view(params, :, 1:(nparams - 1))
     theta = reshape(thetas[1,:], 3, :)
 
-    B,F,Border = nngppred(nb, loc, time, locpred, timepred, theta)
+    B,F,Border,NND = nngppred(nb, loc, time, locpred, timepred, theta)
 
     predsamps = zeros(nsamps, npred)
 
@@ -31,7 +31,7 @@ function continuous_predict(readdir::String, Xpred::AbstractArray, locpred::Abst
 
         theta = reshape(thetas[i,:], 3, :)
 
-        nngppred!(B, F, Border, nb, loc, time, locpred, timepred, theta)
+        nngppred!(B, F, Border, NND, theta)
 
         F[F .< 0] .= 0.0
 
@@ -65,7 +65,7 @@ function bernoulli_predict(readdir::String, Xpred::AbstractArray, locpred::Abstr
 
     theta = reshape(thetas[1,:], 3, :)
 
-    B,F,Border = nngppred(nb, loc, time, locpred, timepred, theta)
+    B,F,Border,NND = nngppred(nb, loc, time, locpred, timepred, theta)
 
     predsamps = zeros(nsamps, npred)
 
@@ -73,7 +73,7 @@ function bernoulli_predict(readdir::String, Xpred::AbstractArray, locpred::Abstr
 
         theta = reshape(thetas[i,:], 3, :)
 
-        nngppred!(B, F, Border, nb, loc, time, locpred, timepred, theta)
+        nngppred!(B, F, Border, NND, theta)
 
         F[F .< 0] .= 0.0
 
@@ -138,8 +138,8 @@ function agg_predict(readdirz::String, readdiry::String, Projection::AbstractArr
     thetay = reshape(thetasy[1,:], 3, :)
     thetaz = reshape(thetasz[1,:], 3, :)
 
-    By,Fy,Byorder = nngppred(nby, locy, timey, locpred, timepred, thetay)
-    Bz,Fz,Bzorder = nngppred(nbz, locz, timez, locpred, timepred, thetaz)
+    By,Fy,Byorder,NNDy = nngppred(nby, locy, timey, locpred, timepred, thetay)
+    Bz,Fz,Bzorder,NNDz = nngppred(nbz, locz, timez, locpred, timepred, thetaz)
 
     predsamps = zeros(nsamps, nproj)
 
@@ -152,8 +152,8 @@ function agg_predict(readdirz::String, readdiry::String, Projection::AbstractArr
         thetay = reshape(thetasy[i,:], 3, :)
         thetaz = reshape(thetasz[i,:], 3, :)
 
-        nngppred!(By, Fy, Byorder, nby, locy, timey, locpred, timepred, thetay)
-        nngppred!(Bz, Fz, Bzorder, nbz, locz, timez, locpred, timepred, thetaz)
+        nngppred!(By, Fy, Byorder, NNDy, thetay)
+        nngppred!(Bz, Fz, Bzorder, NNDz, thetaz)
 
         Fy[Fy .< 0] .= 0.0
         Fz[Fz .< 0] .= 0.0

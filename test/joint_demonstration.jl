@@ -55,7 +55,7 @@ z = 1*(zprob .> rand(nfull))
 b = y .* z
 
 
-n = 2000
+n = 1000
 
 trainind = shuffle(1:nfull)[1:n]
 
@@ -82,7 +82,7 @@ youtdir = "./test/contdump/"
 
 isdir(youtdir) || mkdir(youtdir)
 
-continuous_mcmc(ythetamap, tSqmap, ydata, m, ythetapriors, tsqprior, yHess, youtdir, 2000)
+continuous_mcmc(ythetamap, tSqmap, ydata, m, ythetapriors, tsqprior, yHess, youtdir, 1000)
 
 
 ################
@@ -91,35 +91,27 @@ zthetapriors = (mu = copy(thetaz), var = [0.5 0.5; 0.05 0.1; 1 1].^2)
 zbetapriors = (mu = [1], prec = [10])
 
 
-zthetamap, zlogbook = bernoulli_map(thetaz, zdata, m, zthetapriors, zbetapriors; f_tol = 1e-6, store_trace = true)
-
-zHess = bernoulli_hessian(zthetamap, zdata, m, zthetapriors, zbetapriors)
-
-zoutdir_lp = "./test/berndump_lp"
-
-isdir(zoutdir_lp) || mkdir(zoutdir_lp)
-
-bernoulli_lpmc_3o(zthetamap, zdata, m, zHess, zbetapriors, zoutdir_lp, 2000)
-
 ############
 
 zoutdir_mc = "./test/berndump_mc"
 
 isdir(zoutdir_mc) || mkdir(zoutdir_mc)
 
-bernoulli_mcmc(zthetamap, zdata, m, zthetapriors, zbetapriors, zoutdir_mc, 1000; pgwarmup = 100)
+propvar = 1e-4*Matrix(I,6,6)
+
+bernoulli_mcmc(thetaz, propvar, zdata, m, zthetapriors, zbetapriors, zoutdir_mc, 1000; pgwarmup = 100)
 
 lastsamp = reshape(getlastsamp(zoutdir_mc*"/params.csv"), 3, :)
-
-bernoulli_mcmc(lastsamp, zdata, m, zthetapriors, zbetapriors, zoutdir_mc, 2000; pgwarmup = 100)
+propvar = getpropvar(zoutdir_mc*"/params.csv", 1000)
+bernoulli_mcmc(lastsamp, propvar, zdata, m, zthetapriors, zbetapriors, zoutdir_mc, 2000; pgwarmup = 100)
 
 ###############
 
-sum(bernoulli_loo(zoutdir_lp, zdata))
-sum(bernoulli_loo(zoutdir_mc, zdata))
-
-#############
 ########################
+
+nb = SpaceTimeMultiscale.getpredneighbors(ydata.loc, grid, 25)
+
+rho, Ds, Dt, theta,i = nngppred(nb, ydata.loc, ydata.time, grid, fill(3.0, ngrid,1), thetay)
 
 ypredsamps = continuous_predict(youtdir, ones(ngrid, 1), grid, fill(3.0, ngrid, 1), 25)
 ypredmu = mean(ypredsamps, dims = 1)[1,:]
@@ -168,7 +160,7 @@ sum(ztest.*log.(zpredmu_mc) + ( 1 .- ztest).*log.(1 .- zpredmu_mc))
 
 Projection = fill(1/sum(indpred), 1, sum(indpred))
 
-aggsamps = agg_predict(zoutdir_lp, youtdir, Projection, 1, Xpred, locpred, timepred, m)
+aggsamps = agg_predict(zoutdir_mc, youtdir, Projection, 1, Xpred, locpred, timepred, m)
 
 
 rm(zoutdir_lp, recursive = true)
